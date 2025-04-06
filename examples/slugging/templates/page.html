@@ -1,0 +1,19 @@
+<h1>{{ title }}</h1>
+{% for paragraph in body %}
+<p>{{ paragraph }}</p>
+{% endfor %}
+{% if request.openheart %}
+<hr />
+<p>
+    This page supports emoji-based reactions via the
+    <a href="https://openheart.fyi/" target="_blank">OpenHeart protocol</a>!
+</p>
+<p>
+    To view reactions via the command-line, try:
+</p>
+<pre><code>curl '{{ request.openheart.get_url }}'</code></pre>
+<p>
+    To submit a reaction via the command-line, try:
+</p>
+<pre><code>curl -d '❤️' -X POST '{{ request.openheart.post_url }}'</code></pre>
+{% endif %}

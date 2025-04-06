@@ -1,0 +1,66 @@
+services:
+  uv:
+    build:
+      context: .
+      target: install
+    entrypoint: uv
+    volumes:
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./uv.lock:/app/uv.lock
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          ignore:
+            - .venv/
+        - action: rebuild
+          path: ./uv.lock
+  uv-dev:
+    extends: uv
+    build:
+      context: .
+      args:
+        PROFILE: dev
+  just:
+    extends: uv-dev
+    entrypoint: just
+  ruff:
+    extends: uv-dev
+    entrypoint: ruff
+  pytest:
+    extends: uv-dev
+    entrypoint: pytest
+  sphinx-build:
+    extends: uv-dev
+    entrypoint: sphinx-build
+    command: docs/ docs/_build/html
+  sphinx-autobuild:
+    extends: uv-dev
+    entrypoint: sphinx-autobuild
+    command: docs/ docs/_build/html
+  docs:
+    extends: just
+    command: docs
+  test:
+    extends: just
+    command: test
+  lint:
+    extends: just
+    command: lint
+  lint-fix:
+    extends: just
+    command: lint-fix
+
+  flask:
+    build: .
+    environment:
+      - FLASK_DEBUG=1
+      - FLASK_ENV=development
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_RUN_PORT=5000
+      - FLASK_APP=examples
+    entrypoint: flask
+    command: run
+    ports:
+      - 5000:5000

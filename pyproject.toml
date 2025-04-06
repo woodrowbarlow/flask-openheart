@@ -1,0 +1,64 @@
+[project]
+name = "flask-openheart"
+version = "0.0.1"
+description = "A Flask extension to add support for the OpenHeart protocol"
+classifiers = [
+    "Environment :: Web Environment",
+    "Framework :: Flask",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Development Status :: 2 - Pre-Alpha"
+]
+readme = "README.md"
+license = { file = "LICENSE.txt" }
+authors = [{ name = "Woodrow Barlow" }]
+requires-python = ">=3.8"
+dependencies = ["emoji>=2.14.1", "flask>=2.3", "werkzeug>=2.3.2"]
+[project.urls]
+Documentation = "https://flask-openheart.readthedocs.io/"
+Repository = "https://github.com/woodrowbarlow/flask-openheart/"
+
+[build-system]
+requires = ["hatchling >= 1.27"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "beautifulsoup4>=4.13.4",
+    "pre-commit>=3.5.0",
+    "pytest>=8.3.5",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.11.4",
+    "rust-just>=1.40.0",
+    "sphinx>=7.1.2",
+    "sphinx-autobuild>=2021.3.14",
+    "sphinx-rtd-theme>=3.0.2",
+    "valkey>=6.1.0",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+lint.select = ["ALL"]
+lint.ignore = [
+    "ANN", # we're not using types right now
+    "COM812", # redundant/conflicting when using formatter
+    "TD", "FIX002"
+]
+lint.pydocstyle.convention = "google"
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101", # asserts allowed in tests
+    "PLR2004", # magic numbers allowed in tests
+    "INP001",
+]
+"docs/conf.py" = [
+    "D",
+    "INP001",
+]
+"conftest.py" = ["D"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]

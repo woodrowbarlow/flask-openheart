@@ -1,0 +1,5 @@
+<ul>
+{% for page_id, page in pages.items() %}
+<li><a href="{{ url_for('page', page_id=page_id) }}">{{ page['title'] }}</a></li>
+{% endfor %}
+</ul>
