@@ -1,0 +1,32 @@
+{
+    "name": "OpenHeart-Flask",
+    "build": {
+        "dockerfile": "../Dockerfile",
+        "args": {
+            "PROFILE": "dev",
+            "BASE": "bookworm"
+        },
+        "target": "devcontainer",
+        "context": ".."
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {
+            "version": "latest",
+            "ppa": "false"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "charliermarsh.ruff",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "usernamehw.errorlens",
+                "njpwerner.autodocstring"
+            ]
+        }
+    },
+    "postCreateCommand": "uv sync --frozen",
+    "postStartCommand": "uv run pre-commit install",
+    "remoteUser": "root"
+}
