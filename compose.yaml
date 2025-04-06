@@ -1,0 +1,9 @@
+services:
+  serve-docs:
+    extends:
+      file: compose.util.yaml
+      service: sphinx-autobuild
+  serve-examples:
+    extends:
+      file: compose.util.yaml
+      service: flask
