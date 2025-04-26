@@ -27,7 +27,7 @@ class OpenHeartController:
 
         :return: The URL for the OpenHeart endpoint associated with the specified endpoint.
         """
-        if not self.is_enabled_for(endpoint):
+        if not self.is_enabled_for(endpoint, **values):
             return None
         if _method is None:
             _method = "GET"
@@ -58,7 +58,7 @@ class OpenHeartController:
 
         :return: The slug associated with this endpoint (with the given values), as a string.
         """
-        if not self.is_enabled_for(endpoint):
+        if endpoint not in self.configs:
             return None
         if endpoint in self.slug_functions:
             current_app.inject_url_defaults(endpoint, values)
@@ -82,9 +82,9 @@ class OpenHeartController:
 
         :return: The reactions associated with this endpoint (with the given values), as a dict.
         """
-        if not self.is_enabled_for(endpoint):
-            return {}
         slug = self.slug_for(endpoint, **values)
+        if slug is None:
+            raise RuntimeError  # TODO better exception
         config = self.configs[endpoint]
         with Storage(slug, config) as storage:
             return storage.reactions
@@ -103,9 +103,9 @@ class OpenHeartController:
 
         :return: The reactions associated with this endpoint (with the given values), as a dict.
         """
-        if not self.is_enabled_for(endpoint):
-            raise RuntimeError  # TODO better exception
         slug = self.slug_for(endpoint, **values)
+        if slug is None:
+            raise RuntimeError  # TODO better exception
         config = self.configs[endpoint]
         with Storage(slug, config) as storage:
             return storage.react(reaction)
@@ -114,12 +114,15 @@ class OpenHeartController:
         """Get the OpenHeartConfig associated with a given endpoint."""
         return self.configs.get(endpoint, None)
 
-    def is_enabled_for(self, endpoint):
+    def is_enabled_for(self, endpoint, **values):
         """Check whether OpenHeart is enabled for a given endpoint.
+
+        :param endpoint: The endpoint name associated with the slug to generate.
+        :param values: Values to use for the variable parts of the URL rule.
 
         :return: True if enabled, False otherwise.
         """
-        return endpoint in self.configs
+        return self.slug_for(endpoint, **values) is not None
 
 
 class OpenHeartRequestController:

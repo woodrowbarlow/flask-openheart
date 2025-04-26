@@ -47,7 +47,7 @@ You can also easily add information about reactions into your endpoint:
 ```python
 @app.route("/foo/", openheart=True)
 def foo(self):
-    hearts_count = flask.request.openheart.reactions["❤️"]
+    hearts_count = flask.request.openheart.reactions.get("❤️", 0)
     return "<p>Number of ❤️ reactions: {hearts_count}</p>"
 ```
 

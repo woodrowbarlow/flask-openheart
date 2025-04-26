@@ -10,7 +10,7 @@ from flask_openheart.controller import OpenHeartController, OpenHeartRequestCont
 
 def before_request():
     """If the request is for an OpenHeart-enabled endpoint, inject OpenHeart data about the request."""
-    enabled = current_app.openheart.is_enabled_for(request.endpoint)
+    enabled = current_app.openheart.is_enabled_for(request.endpoint, **request.view_args)
     if enabled:
         request.openheart = OpenHeartRequestController(request.endpoint, **request.view_args)
     else:
