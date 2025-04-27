@@ -90,13 +90,14 @@ class SqliteBackend(Backend):
         """
         self._check_if_connected()
         cursor = self.connection.cursor()
-        self._create(cursor)
         query = """
                 SELECT reaction, count FROM openheart WHERE slug=:slug
             """
         try:
             result = cursor.execute(query, {"slug": slug})
         except sqlite3.DatabaseError as e:
+            if isinstance(e, sqlite3.OperationalError) and str(e) == "no such table: openheart":
+                return
             msg = f"A database error occurred while querying reactions for '{slug}'."
             raise BackendError(msg) from e
         row = result.fetchone()

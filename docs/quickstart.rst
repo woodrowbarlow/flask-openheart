@@ -66,14 +66,14 @@ When generating HTML, you can use this to add information about reactions into y
 
     @app.route("/foo/", openheart=True)
     def foo(self):
-        hearts_count = flask.request.openheart.reactions["❤️"]
+        hearts_count = flask.request.openheart.reactions.get("❤️", 0)
         return "<p>Number of ❤️ reactions: {hearts_count}</p>"
 
 Or, if you use templates:
 
 .. code-block:: jinja
 
-    {% set hearts_count = request.openheart.reactions["❤️"] %}
+    {% set hearts_count = request.openheart.reactions.get("❤️", 0) %}
     <p>Number of ❤️ reactions: {{ hearts_count }}</p>
 
 You can even render each reaction as a button and wrap the whole thing in an HTML form. This allows visitors to add

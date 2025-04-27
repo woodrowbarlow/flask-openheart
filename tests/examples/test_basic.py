@@ -1,10 +1,11 @@
 """Test cases for the 'basic' example."""
 
-from http import HTTPStatus
+import http
 
 from bs4 import BeautifulSoup
 
 from examples.basic.app import app
+from tests.examples.util import _test_disabled_reactions, _test_enabled_reactions
 
 
 def _test_page_title(soup, title):
@@ -39,25 +40,40 @@ class TestBasicExample:
         """A test to be sure the index contains the expected body content."""
         client = app.test_client()
         response = client.get("/")
-        assert response.status_code == HTTPStatus.OK
+        assert response.status_code == http.HTTPStatus.OK
         soup = BeautifulSoup(response.data, "html.parser")
         _test_page_title(soup, "index")
         _test_enabled_footer(soup, "http://localhost/openheart/")
+
+    def test_index_reactions(self):
+        """A test to be sure the index page accepts reactions."""
+        client = app.test_client()
+        _test_enabled_reactions(client, "/openheart/")
 
     def test_foo_body(self):
         """A test to be sure the foo page contains the expected body content."""
         client = app.test_client()
         response = client.get("/foo/")
-        assert response.status_code == HTTPStatus.OK
+        assert response.status_code == http.HTTPStatus.OK
         soup = BeautifulSoup(response.data, "html.parser")
         _test_page_title(soup, "foo")
         _test_enabled_footer(soup, "http://localhost/openheart/foo/")
+
+    def test_foo_reactions(self):
+        """A test to be sure the foo page accepts reactions."""
+        client = app.test_client()
+        _test_enabled_reactions(client, "/openheart/foo/")
 
     def test_bar_body(self):
         """A test to be sure the bar page contains the expected body content."""
         client = app.test_client()
         response = client.get("/bar/")
-        assert response.status_code == HTTPStatus.OK
+        assert response.status_code == http.HTTPStatus.OK
         soup = BeautifulSoup(response.data, "html.parser")
         _test_page_title(soup, "bar")
         _test_disabled_footer(soup)
+
+    def test_bar_reactions(self):
+        """A test to be sure the bar page does not accept reactions."""
+        client = app.test_client()
+        _test_disabled_reactions(client, "/openheart/bar/")

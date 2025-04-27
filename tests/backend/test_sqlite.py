@@ -1,21 +1,27 @@
 """Test cases for the SQLiteBackend object."""
 
-from collections.abc import Sequence
-
 import pytest
 
 from flask_openheart.internal.sqlite import SqliteBackend
 
 
-def _is_sequence(obj):
-    return isinstance(obj, Sequence) and not isinstance(obj, str | bytes | bytearray)
-
-
-def _table_exists(conn, table_name):
+def _table_exists(conn):
     cursor = conn.cursor()
-    query = 'SELECT name FROM sqlite_master WHERE type="table" AND name=:table_name'
-    result = cursor.execute(query, {"table_name": table_name})
+    query = 'SELECT name FROM sqlite_master WHERE type="table" AND name="openheart"'
+    result = cursor.execute(query)
     return result.fetchone() is not None
+
+
+def _get_table(conn):
+    cursor = conn.cursor()
+    query = "SELECT * FROM pragma_table_info('openheart')"
+    result = cursor.execute(query)
+    keys = [row[1] for row in result.fetchall()]
+    if len(keys) == 0:
+        return []
+    query = "SELECT * FROM openheart"
+    result = cursor.execute(query)
+    return [dict(zip(keys, row, strict=False)) for row in result.fetchall()]
 
 
 @pytest.fixture
@@ -26,70 +32,117 @@ def backend():
         SqliteBackend: The in-memory SQLite backend object.
     """
     uri = ":memory:"
-    namespace = "test"
-    with SqliteBackend(uri, namespace) as backend:
+    with SqliteBackend(uri) as backend:
         yield backend
 
 
 class TestSqliteBackend:
     """Test cases for the SQLiteBackend object."""
 
-    def test_constructor(self, backend):
-        """Test that basic properties were set up correctly.
+    def test_iter_no_create_table(self, backend):
+        """Test that iterating on an empty database does not create a table.
 
-        Args:
-            backend: The SQLite backend (supplied by fixture).
+        :param backend: The SQLite backend (supplied by fixture).
         """
-        assert backend is not None
-        assert backend.connection is not None
-        assert backend.namespace == "test"
-        table_name = backend.table_name("foo")
-        assert "foo" in table_name
-        assert backend.namespace in table_name
+        slug = "foo"
+        assert not _table_exists(backend.connection)
+        results = list(backend.iter(slug))
+        assert len(results) == 0
+        assert not _table_exists(backend.connection)
 
-    def test_iter_incr(self, backend):
-        """Test that iterating on a slug which does not exist should return an empty collection.
+    def test_incr_create_table(self, backend):
+        """Test that incrementing a reaction on an empty database creates a table.
 
-        Args:
-            backend: The SQLite backend (supplied by fixture).
+        :param backend: The SQLite backend (supplied by fixture).
+        """
+        slug = "foo"
+        reaction = "❤️"
+        assert not _table_exists(backend.connection)
+        backend.incr(slug, reaction)
+        assert _table_exists(backend.connection)
+
+    def test_incr_performs_insert(self, backend):
+        """Test that incrementing a reaction on an empty database causes it to be inserted into the database.
+
+        :param backend: The SQLite backend (supplied by fixture).
+        """
+        slug = "foo"
+        reaction = "❤️"
+        backend.incr(slug, reaction)
+        table = _get_table(backend.connection)
+        assert len(table) == 1
+        row = table[0]
+        assert slug in row["slug"]
+        assert row["reaction"] == reaction
+        assert row["count"] == 1
+
+    def test_incr_iter(self, backend):
+        """Test that incrementing a reaction causes it to show up when iterating.
+
+        :param backend: The SQLite backend (supplied by fixture).
+        """
+        slug = "foo"
+        reaction = "❤️"
+        backend.incr(slug, reaction)
+        iterator = backend.iter(slug)
+        actual_reaction, count = next(iterator)
+        assert actual_reaction == reaction
+        assert count == 1
+        with pytest.raises(StopIteration):
+            next(iterator)
+
+    def test_incr_count(self, backend):
+        """Test that the "count" field gets incremented each time we increment a reaction.
+
+        :param backend: The SQLite backend (supplied by fixture).
+        """
+        slug = "foo"
+        reaction = "❤️"
+        backend.incr(slug, reaction)
+        actual_reaction, count = next(backend.iter(slug))
+        assert actual_reaction == reaction
+        assert count == 1
+        backend.incr(slug, reaction)
+        actual_reaction, count = next(backend.iter(slug))
+        assert actual_reaction == reaction
+        assert count == 2
+        backend.incr(slug, reaction)
+        actual_reaction, count = next(backend.iter(slug))
+        assert actual_reaction == reaction
+        assert count == 3
+
+    def test_reactions_distinct(self, backend):
+        """Test that incrementing one reaction does not affect the count for another reaction.
+
+        :param backend: The SQLite backend (supplied by fixture).
+        """
+        slug = "foo"
+        reaction = "❤️"
+        other_reaction = "🥨"
+        backend.incr(slug, reaction)
+        backend.incr(slug, reaction)
+        backend.incr(slug, other_reaction)
+        results = dict(backend.iter(slug))
+        assert len(results) == 2
+        assert results[reaction] == 2
+        assert results[other_reaction] == 1
+
+    def test_slugs_distinct(self, backend):
+        """Test that incrementing reactions on one slug does not affect the counts for another slug.
+
+        :param backend: The SQLite backend (supplied by fixture).
         """
         slug = "foo"
         other_slug = "bar"
         reaction = "❤️"
         other_reaction = "🥨"
-        table_name = backend.table_name(slug)
-        assert not _table_exists(backend.connection, table_name)
-        results = backend.iter(slug)
-        assert _is_sequence(results)
-        assert len(results) == 0
-        assert not _table_exists(backend.connection, table_name)
         backend.incr(slug, reaction)
-        assert _table_exists(backend.connection, table_name)
-        results = backend.iter(slug)
-        assert _is_sequence(results)
-        assert len(results) == 1
-        actual_reaction, count = results[0]
-        assert actual_reaction == reaction
-        assert count == 1
         backend.incr(slug, reaction)
-        results = backend.iter(slug)
-        assert len(results) == 1
-        actual_reaction, count = results[0]
-        assert actual_reaction == reaction
-        assert count == 2
-        backend.incr(slug, other_reaction)
-        results = backend.iter(slug)
-        assert len(results) == 2
-        actual_reaction, count = results[0]
-        assert actual_reaction == reaction
-        assert count == 2
-        actual_reaction, count = results[1]
-        assert actual_reaction == other_reaction
-        assert count == 1
         backend.incr(other_slug, reaction)
-        assert _table_exists(backend.connection, backend.table_name(other_slug))
-        assert _table_exists(backend.connection, table_name)
-        results = backend.iter(other_slug)
+        backend.incr(other_slug, other_reaction)
+        results = dict(backend.iter(slug))
         assert len(results) == 1
-        results = backend.iter(slug)
+        assert results[reaction] == 2
+        results = dict(backend.iter(other_slug))
         assert len(results) == 2
+        assert results[reaction] == 1

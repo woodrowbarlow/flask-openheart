@@ -33,7 +33,7 @@ def page(page_id):
     Args:
         page_id: The page id.
     """
-    if page_id > len(pages):
+    if page_id >= len(pages):
         abort(404)
     return render_template("page.html", **pages[page_id])
 
@@ -54,7 +54,7 @@ def page_slug(page_id):
     Returns:
         A unique slug for each page. This will be cast to a string by Flask-OpenHeart.
     """
-    if page_id > len(pages):
+    if page_id >= len(pages):
         # if we return a valid slug, then the page is "reactable" even if the page itself causes a 404 error.
         # the slug function can return None to indicate that the OpenHeart endpoint should also return 404.
         return None
