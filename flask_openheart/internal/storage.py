@@ -34,6 +34,9 @@ def sanitize_reaction(data):
 
     :return: The matching emoji.
     """
+    if not data:
+        msg = "No emoji data supplied."
+        raise InvalidReactionError(msg)
     match = None
     emojis = EMOJI_DATA.keys()
     for emoji in emojis:
