@@ -16,7 +16,10 @@ readme = "README.md"
 license = { file = "LICENSE.txt" }
 authors = [{ name = "Woodrow Barlow" }]
 requires-python = ">=3.8"
-dependencies = ["emoji>=2.14.1", "flask>=2.3", "werkzeug>=2.3.2"]
+dependencies = [
+ "flask>=2.3",
+ "werkzeug>=2.3.2",
+]
 [project.urls]
 Documentation = "https://flask-openheart.readthedocs.io/"
 Repository = "https://github.com/woodrowbarlow/flask-openheart/"

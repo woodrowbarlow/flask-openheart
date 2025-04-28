@@ -2,7 +2,7 @@
 
 from flask import current_app
 
-from flask_openheart.internal import Storage
+from flask_openheart.internal import Storage, get_backend
 
 
 class OpenHeartController:
@@ -86,7 +86,8 @@ class OpenHeartController:
         if slug is None:
             raise RuntimeError  # TODO better exception
         config = self.configs[endpoint]
-        with Storage(slug, config) as storage:
+        with get_backend(config.database_uri) as backend:
+            storage = Storage(backend, slug)
             return storage.reactions
 
     def react_to(self, reaction, endpoint, **values):
@@ -107,7 +108,8 @@ class OpenHeartController:
         if slug is None:
             raise RuntimeError  # TODO better exception
         config = self.configs[endpoint]
-        with Storage(slug, config) as storage:
+        with get_backend(config.database_uri) as backend:
+            storage = Storage(backend, slug)
             return storage.react(reaction)
 
     def config_for(self, endpoint):

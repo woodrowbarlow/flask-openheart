@@ -1,8 +1,15 @@
 """The storage is an interface between the extension and the backend."""
 
-from emoji import EMOJI_DATA
+import importlib
+import json
 
-from flask_openheart.internal.backend import get_backend
+
+def _get_path(name):
+    return importlib.resources.files("flask_openheart.internal").joinpath(name)
+
+
+with _get_path("emoji.json").open("rb") as f:
+    EMOJI_DATA = json.load(f)
 
 
 class InvalidReactionError(Exception):
@@ -53,19 +60,16 @@ def sanitize_reaction(data):
 class Storage:
     """The storage is an interface between the extension and the backend."""
 
-    def __init__(self, slug, config):
+    def __init__(self, backend, slug, allowed=None, blocked=None, defaults=None):
         """Create a new instance of OpenHeartStorage.
 
-        :param config: An instance of OpenHeartConfig.
         :param slug: A slug representing the page.
         """
+        self.backend = backend
         self.slug = slug
-        self.config = config
-        self.backend = None
-
-    def _check_if_connected(self):
-        if self.backend is None:
-            raise RuntimeError  # TODO better exception
+        self.allowed = allowed
+        self.blocked = blocked
+        self.defaults = defaults
 
     @property
     def reactions(self):
@@ -73,8 +77,20 @@ class Storage:
 
         :return: A dict in which the reactions are the keys and the counts are the values.
         """
-        self._check_if_connected()
-        return dict(self.backend.iter(self.slug))
+        result = {}
+        for reaction, count in self.backend.iter(self.slug):
+            if self.allowed is not None and reaction not in self.allowed:
+                continue
+            if self.blocked is not None and reaction in self.blocked:
+                continue
+            result[reaction] = count
+        if self.defaults is not None:
+            for reaction, count in self.defaults.items():
+                if reaction in result:
+                    result[reaction] += count
+                else:
+                    result[reaction] = count
+        return result
 
     def react(self, reaction):
         """Add a reaction for a given page.
@@ -83,20 +99,12 @@ class Storage:
 
         :return: The updated reactions, as a dict.
         """
-        self._check_if_connected()
         reaction = sanitize_reaction(reaction)[0]
+        if self.allowed is not None and reaction not in self.allowed:
+            msg = "This emoji is not allowed."
+            raise InvalidReactionError(msg)
+        if self.blocked is not None and reaction in self.blocked:
+            msg = "This emoji is blocked."
+            raise InvalidReactionError(msg)
         self.backend.incr(self.slug, reaction)
         return self.reactions
-
-    def __enter__(self):
-        """Enter a conectext manager. This initiates a connection."""
-        self.backend = get_backend(self.config.database_uri)
-        self.backend.__enter__()
-        return self
-
-    def __exit__(self, exc_type, exc, traceback):
-        """Exit a conectext manager. This closes the connection."""
-        if self.backend is None:
-            return
-        self.backend.__exit__(exc_type, exc, traceback)
-        self.backend = None
